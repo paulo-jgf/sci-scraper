@@ -8,12 +8,15 @@ Use o Firefox para descobrir os seletores que funcionam no requests!
 @author: paulo
 """
 
-import requests, bs4, re
+import requests
+import bs4
+import re
+import os
 from datetime import datetime
-import pandas as pd 
+import pandas as pd
 
 
-# Pega as informações detalhadas de cada artigo
+# Detailing all article info
 def detailArticle(X):
     global investigar
     if X['URL'] in detailed_urls:
@@ -86,7 +89,7 @@ def detailArticle(X):
         
         return {'nameAuth':nameAuth, infoAuth:'infoAuth', 'countryAuth':countryAuth}
     
-    # Existem autores? Se sim, vamos buscar info do autor 1
+    # Are there authors? If yes, lets get author 1 info
     pais_autor1 = '?'
     infoAllauthors = []
     
@@ -110,13 +113,12 @@ def detailArticle(X):
             info_autor1 = info_autor1[0].text.strip(' 1')
             pais_autor1 = info_autor1.split(',')[-1].strip(' .')
             
-            # Fora de padrao
+            # Problem
             if len(pais_autor1) > 65 and '@' not in pais_autor1: pais_autor1 = pais_autor1.split()[-1]
             
             # Email
             if '@' in pais_autor1 and len(pais_autor1) < 75: pais_autor1 = pais_autor1.split('.')[0].strip()
             
-            # Tira termos numericos
             pais_autor1 = ' '.join([t for t in pais_autor1.split() if not re.sub('\D','',t)]).strip()
             
         else:
@@ -169,7 +171,7 @@ def trabalha_pagina_busca(sopa, nartigos, termos):
         'article.full-docsum:nth-child({}) > div:nth-child(2) > div:nth-child(1) > div:nth-child(2) > span:nth-child(7)'.format(
                         na))
         
-        # Trabalhando a cita completa para tirar periodico e a data, caso normal
+        # Normal case, getting periodic and date
         if ';' in el3:
             periodico, ano, mes, dia = separa_periodico_data(info_pub=el3.split(';')[0].strip())
             if 'ahead of print' in el3:
@@ -230,49 +232,47 @@ def trabalha_pagina_busca(sopa, nartigos, termos):
     return perPageRes
 
 
-# Monte a página no navegador, com os filtros que quiser, e passe a url aqui, não mude opcao de paginacao ou numero de resultados exibidos              
-def baixa_url_pre_montada(url):
+# Mount the page in the browser, with the filters you want, and pass the url here, do not change the pagination option or the number of results displayed              
+def baixa_url_pre_montada(url, execFolder):
     
-    # Adiciona a op 200 por pagina e page=1
+    # Set show size anda page
     res = requests.get(url + '&size=200&page=1')
     sopa = bs4.BeautifulSoup(res.text, 'html.parser')
     
     try:
-        # Seletor pro elemento que contém o número de resultados, servirá para descobrir o npags a serem baixadas
+        # Get n results to solve n pages
         elem = sopa.select('.results-amount-container > div:nth-child(1) > span:nth-child(1)')
         nres = int( re.sub('\D','', elem[0].text.strip()) )
     except:
-        # 0 resultados no par
+        # 0 results
         if 'No results were found' in res.text: print('0 resultados')
         else: print('Erro brabo')
         raise SystemExit
     
     print(nres, 'artigos localizados...')
     
-    # Pega artigos da primeira página
+    # Get 1st page results
     scrape_base = trabalha_pagina_busca(sopa, nres, termos=('ver url',))
 
-    # Divide nresultados por 200, que é o n mostrado por página
-    # Se tiver resto adiciona 1, se não tiver adiciona 0
+    # Solving n pages
     npags = int(nres / 200) + (nres % 200 > 0)
     
-    # Se tiver mais que uma página, vamos explorar as demais páginas
+    # Follow up pages
     if npags > 1:
         for pag in range(2, npags + 1):
             print('pag', pag)
             
-            # A página anterior já reduziu o número de artigos restantes em 200
+            # Control scrape size in progress
             nres = nres - 200
             
-            # Virando a pagina na url
+            # Turning page
             res = requests.get(url + '&size=200&page={}'.format(pag))
             sopa = bs4.BeautifulSoup(res.text, 'html.parser')
             
-            # Pega artigos da página atual
+            # Get current page articles
             scrape_base = scrape_base + trabalha_pagina_busca(sopa, nres, termos=('ver url',))
                 
-    scrape_base = pd.DataFrame(scrape_base) 
-    scrape_base.to_csv('scrape_base.csv', sep='|', index= False, encoding='utf-8')
+    scrape_base = pd.DataFrame(scrape_base)   
             
     return scrape_base
 
@@ -282,22 +282,22 @@ def baixa_url_pre_montada(url):
 # https://pubmed.ncbi.nlm.nih.gov/?linkname=pubmed_pubmed_citedin&from_uid=33303732
 
 def scrape_control(url='https://pubmed.ncbi.nlm.nih.gov/?term=target+trial+pregnancy+woman+saito', 
-                   execFolder='tmp'):              
+                   execFolder=''):              
     global detailed_urls
     detailed_urls = []
     
     if execFolder: 
         if not execFolder.endswith('\\'): execFolder += '\\'    
     
-    scrape_base = baixa_url_pre_montada(url)
-    
+    scrape_base = baixa_url_pre_montada(url, execFolder)
+
+    if os.path.exists(execFolder + 'scrape_base.csv'):
+        os.remove(execFolder + 'scrape_base.csv')    
     scrape_base.to_csv(execFolder + 'scrape_base_pub.csv', sep='|', index=False, encoding='utf-8')
     
     #
     df = scrape_base.copy()
-    
-    
-    
+       
     #autores_compl, doi, pmcid, url_fulltext, abstract, kw
     df['AUTOR_COMPLETO'], df['PAIS_AUTOR'], df['INFO_AUTOR_1'], df['DOI'], df['PMCID'], df['DOWNLOAD'], df['ABSTRACT'], df['KEYWORDS'] = zip(
             *df.apply(detailArticle, axis=1))
@@ -321,7 +321,10 @@ def scrape_control(url='https://pubmed.ncbi.nlm.nih.gov/?term=target+trial+pregn
     #df_final[['AUTOR_COMPLETO', 'PAIS_AUTOR', 'INFO_AUTOR_1','DOI', 'PMCID', 'ABSTRACT', 
     #          'KEYWORDS']] = df_final[['AUTOR_COMPLETO', 'PAIS_AUTOR', 'INFO_AUTOR_1','DOI', 'PMCID', 'DOWNLOAD', 'ABSTRACT', 
     #          'KEYWORDS']].applymap(limpa)
-    
+
+    if os.path.exists(execFolder + 'pubmed_complete.xlsx'):
+        os.remove(execFolder + 'pubmed_complete.xlsx') 
+   
     with pd.ExcelWriter(execFolder + 'pubmed_complete.xlsx') as writer:
         df.to_excel(writer, sheet_name='results', index=False)
         

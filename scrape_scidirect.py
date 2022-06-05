@@ -5,47 +5,31 @@ Created on Tue Jun 22 08:25:25 2021
 @author: paulo
 """
 
-# Link pesquisando em todo lugar
-#https://www.sciencedirect.com/search?qs=%28COVID-19%20OR%20coronavirus%20OR%20SARS-CoV-2%29%20AND%20%28Nanomedicines%20OR%20Nanocomposites%20OR%20Nanoparticles%20OR%20Nanostructures%20OR%20Nanotechnology%29&date=2020-2021&articleTypes=REV%2CFLA%2CCRP%2CEDI%2CSSU%2CSCO&lastSelectedFacet=articleTypes
-
-# Link pesquisando no titulo, no abstract ou kws
-#https://www.sciencedirect.com/search?date=2020-2021&tak=%28COVID-19%20OR%20coronavirus%20OR%20SARS-CoV-2%29%20AND%20%28Nanomedicines%20OR%20Nanocomposites%20OR%20Nanoparticles%20OR%20Nanostructures%20OR%20Nanotechnology%29&articleTypes=REV%2CFLA%2CCRP%2CEDI%2CSCO&lastSelectedFacet=articleTypes
-
-# Sem artile types
-#https://www.sciencedirect.com/search?date=2020-2021&tak=%28COVID-19%20OR%20coronavirus%20OR%20SARS-CoV-2%29%20AND%20%28Nanomedicines%20OR%20Nanocomposites%20OR%20Nanoparticles%20OR%20Nanostructures%20OR%20Nanotechnology%29
-
-# 100 por pagina, reparar que last Select presentes nos acima nao faz nada
-#https://www.sciencedirect.com/search?date=2020-2021&tak=%28COVID-19%20OR%20coronavirus%20OR%20SARS-CoV-2%29%20AND%20%28Nanomedicines%20OR%20Nanocomposites%20OR%20Nanoparticles%20OR%20Nanostructures%20OR%20Nanotechnology%29&articleTypes=REV%2CFLA%2CCRP%2CEDI%2CSCO&show=100
-
-# Reparar que a virada de pagina é feita com offsets, pagina 2 e 3 a seguir
-#https://www.sciencedirect.com/search?date=2020-2021&tak=%28COVID-19%20OR%20coronavirus%20OR%20SARS-CoV-2%29%20AND%20%28Nanomedicines%20OR%20Nanocomposites%20OR%20Nanoparticles%20OR%20Nanostructures%20OR%20Nanotechnology%29&articleTypes=REV%2CFLA%2CCRP%2CEDI%2CSCO&show=100&offset=100
-#https://www.sciencedirect.com/search?date=2020-2021&tak=%28COVID-19%20OR%20coronavirus%20OR%20SARS-CoV-2%29%20AND%20%28Nanomedicines%20OR%20Nanocomposites%20OR%20Nanoparticles%20OR%20Nanostructures%20OR%20Nanotechnology%29&articleTypes=REV%2CFLA%2CCRP%2CEDI%2CSCO&show=100&offset=200
 
 from selenium import webdriver
 from selenium.webdriver.firefox.options import Options
-
 from datetime import datetime
-import re, time, json
 import pandas as pd
+import re
+import time
+import json
+import os
 import calendar
 
 
-
-# Função de inicialização do navegador
+# Automated browser init
 def init_firefox(dir_princ='', esconder_janela=True):
     global driver
     
-    # Mostrar janela ou não mostrar janela do Firefox - Modo headless
     options = Options()
     options.headless = esconder_janela
 
-    #Tentando garantir que o firefox fechará
     profile = webdriver.FirefoxProfile()
     profile.set_preference('dom.disable_beforeunload', True)
     
     if dir_princ: dir_princ += '\\'
     
-    # Path para o driver e definição do webdriver
+    # geckodriver expected to be in the same folder
     try:
         driver = webdriver.Firefox(options=options, executable_path=dir_princ+'geckodriver.exe')
     except:
@@ -53,11 +37,11 @@ def init_firefox(dir_princ='', esconder_janela=True):
         try:
             driver = webdriver.Firefox(options=options, executable_path=path_geckodriver)
         except:
-            print('geckodriver.exe não localizado! Crie uma cópia do geckodriver.exe na pasta do código.')
-            print('Se necessário, baixar em https://github.com/mozilla/geckodriver/releases')
+            print('Copy a compatible geckodriver.exe to the folder where this module is')
+            print('Download at https://github.com/mozilla/geckodriver/releases')
             raise SystemExit
             
-# Espera elemento aparecer na página
+# wait for required element to be loaded
 def cozinha_elemento(seletor, timeout=60):
     global driver
     tentativa = 0
@@ -65,7 +49,7 @@ def cozinha_elemento(seletor, timeout=60):
     if timeout == 0: max_tentativas = 1
     else: max_tentativas = timeout * 2
     
-    # Controle Time out
+    # Time ut control
     while tentativa < max_tentativas:
         
         try:
@@ -77,7 +61,7 @@ def cozinha_elemento(seletor, timeout=60):
             
     return False
 
-# Espera termo aparecer na página
+# Wait for specific term on html
 def espera_termo_na_pagina(termo, testa_erro=False):
     global driver
     tentativa = 0
@@ -99,7 +83,7 @@ def espera_termo_na_pagina(termo, testa_erro=False):
         
         # Timeout 20 segundos: 0.5x40
         if tentativa > 120:
-            print('Timeout: leitura da página > 60 seg')
+            print('Timeout: Loading > 60 seg')
             driver.quit()
             raise SystemExit
             
@@ -108,7 +92,7 @@ def espera_termo_na_pagina(termo, testa_erro=False):
 def busca_por_pagina():
     months = [m for m in list(calendar.month_name) if m]
     
-    # Prepara o time stamp!
+    # timestamping!
     dt = str(datetime.now())[:-7]     
     
     # Caixas de conteudo de cada artigo
@@ -116,7 +100,7 @@ def busca_por_pagina():
     
     artigos = []
     
-    # Iterando em cada um dos artigos encontrados na pagina atual
+    # Iter found articles at current page
     for el_ex in elements:
     
         art_atual = {'DT': dt,
@@ -131,7 +115,7 @@ def busca_por_pagina():
                      'ACESSO_ART':'',
                      'DOWNLOAD':''}
         
-        # Iteração no conteúdo de cada caixa de info de artigo, buscando as infos que tem link, portanto são 'a'
+        # Iter each article specfic information
         for e in el_ex.find_elements_by_tag_name("a"):
             
             eurl, eclass = e.get_attribute('href'), e.get_attribute('class')
@@ -145,10 +129,10 @@ def busca_por_pagina():
                 elif 'download-link' in eclass:
                     art_atual['DOWNLOAD'] = eurl
                     
-        # Iteração para buscar a data do artigo!
+        # Iter to find article date
         for e in el_ex.find_elements_by_class_name("srctitle-date-fields"):
                 
-            #Vamos aqui trabalhar dia mes e ano
+            # Solving day, month and year
             dt_sep = re.sub('AVAILABLE ONLINE ', '', e.text).split()[-3:]
             
             if dt_sep and len(re.sub('\D','', dt_sep[-1])) == 4:
@@ -163,7 +147,7 @@ def busca_por_pagina():
             art_atual['DATA_ARTIGO'] = art_atual['DIA'] +' '+ art_atual['MES'] +' '+ art_atual['ANO']
             break
             
-        # Iteração para buscar tipo de artigo e nivel de acesso
+        # Iter to find article type and access level
         for e in el_ex.find_elements_by_tag_name("span"):
             eclass = e.get_attribute('class')
             if eclass:
@@ -183,11 +167,11 @@ def itera_busca(url):
     
     init_firefox()
     
-    # adicionando a opção de tem por pagina
+    # Set show size
     if '&show=100' not in url: url += '&show=100'
     
     driver.get(url)
-    # Vamos esperar o seletor de ordenar por data aparecer, para garantir que a página carregou
+    # Wait for "order by date" to appear, to make sure page is properly loaded
     cozinha_elemento('div.ResultSortOptions:nth-child(3) > div:nth-child(1) > a:nth-child(3) > span:nth-child(1)')
        
     # Numero de resultados
@@ -201,8 +185,7 @@ def itera_busca(url):
     
     print(nres, 'artigos localizados...')
        
-    # Divide nresultados por 100, que é o n mostrado por página
-    # Se tiver resto adiciona 1, se não tiver adiciona 0
+    # Solving number of pages
     npags = int(nres / 100) + (nres % 100 > 0)
     
     scrape_base, offset = [], 0
@@ -233,14 +216,12 @@ def scrape_avancado(df):
     
     for i, row in df.iterrows():
         
-        # Reinicia driver a cada 50
+        # Restart driver after 50 requests, to prevent memory overload
         if not i % 50:
             if i > 1: driver.quit()
             init_firefox()
 
         url = row['URL']
-        
-        #if i >2: break
         
         # Já pegamos este?
         if url in scrape_final.keys() and url not in falhas.keys(): continue
@@ -250,15 +231,14 @@ def scrape_avancado(df):
         print(url)
         
         driver.get(url)
-        
-        # PAUSA
+        # Required pause
         time.sleep(3)
         
         try:
             chave_json = '<script type="application/json" data-iso-key="_0">'
             html = driver.page_source 
-            # abre Json <script type="application/json" data-iso-key="_0">
-            # Fecha Json </script>
+            # Json start <script type="application/json" data-iso-key="_0">
+            # Json closure </script>
             info_json = html[html.find(chave_json) + len(chave_json):]
             info_json = info_json[:info_json.find('</script>')].strip()
             info_json = json.loads(info_json)
@@ -268,10 +248,10 @@ def scrape_avancado(df):
             falhou += '-json'
             
         try:
-            #Aqui selecionamos uma "list" de abstracts, nos interessamos pela do autor!
+            # Here a "list" of abstracts, but e want author
             abstract = info_json['abstracts']['content']
             
-            # Vamos selecionar o abstract que nos interessa (Pode ser author, highlights, graphical.. etc?)
+            # Selecting the abstract (Pode ser author, highlights, graphical.. etc?)
             if len(abstract) == 1:
                 abstract = abstract[0]['$']['id']
             else:
@@ -284,7 +264,7 @@ def scrape_avancado(df):
             # Opção texto feio, confiável.. mas inutil quase
             #abstract = str(abstract[0]['$$'])
             
-            # Seletor do paragrafo, obtido de dentro do json... nova opção          
+            # parag selector, from within the json...          
             el = driver.find_element_by_css_selector('#'+abstract)      
             abstract = el.text
             
@@ -319,14 +299,14 @@ def scrape_avancado(df):
             nomes_completos = ['?']
             falhou += '-aut'
         
-        # Info autor 1 filiação
+        # Info autor 1 affiliation
         try:
-            # Precisamos expandir a lista de autores de qq jeito para funcionar
+            # Expanding authors list to make it work
             el = driver.find_element_by_css_selector('#show-more-btn > span:nth-child(1)')
             el.click()
             time.sleep(0.5)
             
-            # Opção 2       
+            # Option 2       
             #el = driver.find_element_by_css_selector('dl.affiliation:nth-child('+str(len(nomes_completos) + 2) +') > dd:nth-child(2)')
             #info_autor_1 = el.text
             
@@ -405,6 +385,9 @@ def scrape_control(url = 'https://www.sciencedirect.com/search?tak=%28Nanomedici
             
     scrape_base = itera_busca(url)
     
+    if os.path.exists(execFolder + 'scrape_base_scidirect.csv'):
+        os.remove(execFolder + 'scrape_base_scidirect.csv')     
+    
     scrape_base.to_csv(execFolder + 'scrape_base_scidirect.csv', sep='|', index=False, encoding='utf-8')
     
     scrape_base = pd.read_csv(execFolder + 'scrape_base_scidirect.csv', delimiter='|', encoding='utf-8', dtype=str).fillna('')
@@ -414,6 +397,10 @@ def scrape_control(url = 'https://www.sciencedirect.com/search?tak=%28Nanomedici
     df_final = to_df(scrape_final)
     
     df_final = scrape_base.merge(df_final, on='URL', how='outer')
+    
+    if os.path.exists(execFolder + 'scrape_quase_scidirect.csv'):
+        os.remove(execFolder + 'scrape_quase_scidirect.csv')
+    
     df_final.to_csv(execFolder + 'scrape_quase_scidirect.csv', sep='|', index=False, encoding='utf-8')
     
     resultado = df_final[['DT','TITLE', 'TIPO_ARTIGO', 'PERIODICO', 'DIA', 'MES', 'ANO',
@@ -425,6 +412,9 @@ def scrape_control(url = 'https://www.sciencedirect.com/search?tak=%28Nanomedici
     dup = resultado[resultado.duplicated(subset=['DOI'], keep=False)]
     
     resultado['AUTOR_COMPLETO'] = resultado['AUTOR_COMPLETO'].apply(lambda x: '; '.join(x))    
+    
+    if os.path.exists(execFolder + 'scidirect_complete.xlsx'):
+        os.remove(execFolder + 'scidirect_complete.xlsx')    
     
     with pd.ExcelWriter(execFolder + 'scidirect_complete.xlsx') as writer:
         resultado.to_excel(writer, sheet_name='results', index=False)

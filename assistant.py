@@ -34,6 +34,8 @@ def init(config):
     
     config['results_path'] = results_path
     
+    combine_results(config)
+    
 
 def combine_results(config):
     
@@ -41,14 +43,13 @@ def combine_results(config):
         return pd.read_excel(path, sheet_name = 'results', dtype=str)
     
     # Reading and concatanating results from scrapers
-    df = pd.concat( [ reader(path) for path in config['results_path'] ] )
+    df = pd.concat( [ reader(path) for path in config['results_path'] ], ignore_index=True )
     
     df.drop_duplicates(subset=['DOI'], keep='first', inplace=True)
 
     # If there are required terms, we will apply em to all papers found
     if config['required_terms']:
         required_terms_logic(config, df)
-
     
     with pd.ExcelWriter('Final result.xlsx') as writer:
         df.to_excel(writer, sheet_name='combined_result', index=False)   
