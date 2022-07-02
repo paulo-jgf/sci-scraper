@@ -10,5 +10,5 @@ Future goal is to provide a way to run it thru google colab or similar "paste an
 There is no friendly environment tool inplace for now, so please check the packages in use, and track the errors if required be.
 
 ## Getting it working
-Place a (compatible to your Firefox version) geckodriver.exe at the same folder as the modules.
-Open main.py and go from from there.
+- Place a (compatible to your Firefox version) geckodriver.exe at the same folder as the modules.
+- Open main.py and go from from there.
