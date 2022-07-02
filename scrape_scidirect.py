@@ -66,22 +66,22 @@ def espera_termo_na_pagina(termo, testa_erro=False):
     global driver
     tentativa = 0
     
-    # Teste de erro na página, expressão chave que denota a ocrrência de um erro
+    # Error evidence check. Is it present?
     if testa_erro:
         # Pausa necessária para esperar livrar o último erro que ocorreu!
         time.sleep(1.0)
         if testa_erro in driver.page_source: return False     
     
-    # Teste principal
+    # Main loading test
     while termo not in driver.page_source:
         tentativa += 1
         time.sleep(0.5)
 
-        # Teste de erro na página, expressão chave que denota a ocrrência de um erro
+        # Error evidence check. Is it present? 
         if testa_erro:
             if testa_erro in driver.page_source: return False        
         
-        # Timeout 20 segundos: 0.5x40
+        # Timeout 20 s
         if tentativa > 120:
             print('Timeout: Loading > 60 seg')
             driver.quit()
@@ -95,7 +95,7 @@ def busca_por_pagina():
     # timestamping!
     dt = str(datetime.now())[:-7]     
     
-    # Caixas de conteudo de cada artigo
+    # content elements
     elements = driver.find_elements_by_class_name('result-item-content')
     
     artigos = []
@@ -174,7 +174,7 @@ def itera_busca(url):
     # Wait for "order by date" to appear, to make sure page is properly loaded
     cozinha_elemento('div.ResultSortOptions:nth-child(3) > div:nth-child(1) > a:nth-child(3) > span:nth-child(1)')
        
-    # Numero de resultados
+    # Total results value
     el = driver.find_element_by_css_selector('#srp-facets > div:nth-child(1) > h1:nth-child(1) > span:nth-child(1)')
     nres = re.sub('\D','', el.text)
     
@@ -192,7 +192,7 @@ def itera_busca(url):
     
     for i in range(npags):
         
-        # Vamos "virar a página", neste caso adicionando offset, para todas as páginas acima da primeira 
+        # turn the page, in this case adding offset, for all pages after the first 
         if i > 0:
             offset += 100
             driver.get(url + '&offset='+ str(offset))
@@ -223,7 +223,7 @@ def scrape_avancado(df):
 
         url = row['URL']
         
-        # Já pegamos este?
+        # Already caught?
         if url in scrape_final.keys() and url not in falhas.keys(): continue
     
         falhou = ''
@@ -409,7 +409,7 @@ def scrape_control(url = 'https://www.sciencedirect.com/search?tak=%28Nanomedici
     
     resultado['BASE'] = 'SCI.DIRECT'
     
-    dup = resultado[resultado.duplicated(subset=['DOI'], keep=False)]
+    #dup = resultado[resultado.duplicated(subset=['DOI'], keep=False)]
     
     resultado['AUTOR_COMPLETO'] = resultado['AUTOR_COMPLETO'].apply(lambda x: '; '.join(x))    
     
@@ -428,7 +428,7 @@ if __name__ == "__main__":
 
 
 
-# TESTES
+# DEV TESTS
 #init_firefox()
 #
 #

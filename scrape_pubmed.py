@@ -78,13 +78,13 @@ def detailArticle(X):
         infoAuth = infoAuth[0].text.strip(' 0123456789')
         countryAuth = infoAuth.split(',')[-1].strip(' .')
         
-        # Fora de padrao
+        # Alternative pattern
         if len(countryAuth) > 65 and '@' not in countryAuth: countryAuth = countryAuth.split()[-1]
         
         # Email
         if '@' in countryAuth and len(countryAuth) < 75: countryAuth = countryAuth.split('.')[0].strip()
         
-        # Tira termos numericos
+        # Clear of digits
         countryAuth = ' '.join([t for t in countryAuth.split() if not re.sub('\D','',t)]).strip()
         
         return {'nameAuth':nameAuth, infoAuth:'infoAuth', 'countryAuth':countryAuth}
@@ -278,7 +278,7 @@ def baixa_url_pre_montada(url, execFolder):
 
 
 
-# CITADO - quem cita o PMID 33303732
+# TODO CITADOs - quem cita o PMID 33303732
 # https://pubmed.ncbi.nlm.nih.gov/?linkname=pubmed_pubmed_citedin&from_uid=33303732
 
 def scrape_control(url='https://pubmed.ncbi.nlm.nih.gov/?term=target+trial+pregnancy+woman+saito', 
@@ -312,7 +312,7 @@ def scrape_control(url='https://pubmed.ncbi.nlm.nih.gov/?term=target+trial+pregn
     
     df['BASE'] = 'PUBMED'
     
-    dup = df[df.duplicated(subset=['DOI'], keep=False)]
+    #dup = df[df.duplicated(subset=['DOI'], keep=False)]
     
     #def limpa(x):
     #    if x == 'zzz..': return 'duplicata'
