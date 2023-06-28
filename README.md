@@ -1,6 +1,5 @@
 # sci-scraper
-This project aims to provide an automated search on scientific databases. Is is already in use, but not exactly in this published form.
-We hope, with this published version, to provide an easy enough way to reproduce its execution, giving the same results, and in the future unify the "production version" here.
+This project aims to provide an automated search on scientific databases.
 
 ## Notes on getting it working
 For now it is required some programming experience in Python to run. It depends on selenium, geckodriver, and Mozilla Firefox browser installed for some of the scraping work. The current code is only expected to run in a MS Windows OS.
