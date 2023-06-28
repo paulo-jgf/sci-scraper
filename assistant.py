@@ -8,54 +8,32 @@ module will need to be updated
 @author: paulo
 """
 
-import os
 import pandas as pd
 import scrape_pubmed
 import scrape_scidirect
+import scraped_processing
 
 def init(config):
     
-    # Creating the exec folder
-    execFolder = 'tmp'
-    os.makedirs(execFolder, exist_ok=True)
-    results_path = []
-    
     if config['url_query_pubmed']:
-        path = scrape_pubmed.scrape_control(url=config['url_query_pubmed'],
-                                            execFolder=execFolder)        
-        # returned string with file path
-        results_path.append(path)
+        resPubmed = scrape_pubmed.scrape_control(url=config['url_query_pubmed'])
         
     if config['url_query_science_direct']:
-        path = scrape_scidirect.scrape_control(url=config['url_query_science_direct'],
-                                            execFolder=execFolder)                
-        # returned string with file path
-        results_path.append(path)
+        resSciDirect = scrape_scidirect.scrape_control(url=config['url_query_science_direct'])
     
-    config['results_path'] = results_path
+    df = scraped_processing.main()
     
-    combine_results(config)
-    
-
-def combine_results(config):
-    
-    def reader(path):
-        return pd.read_excel(path, sheet_name = 'results', dtype=str)
-    
-    # Reading and concatanating results from scrapers
-    df = pd.concat( [ reader(path) for path in config['results_path'] ], ignore_index=True )
-    
-    df.drop_duplicates(subset=['DOI'], keep='first', inplace=True)
-
-    # If there are required terms, we will apply em to all papers found
     if config['required_terms']:
-        required_terms_logic(config, df)
+        df = required_terms_logic(config, df)
     
-    with pd.ExcelWriter('Final result.xlsx') as writer:
-        df.to_excel(writer, sheet_name='combined_result', index=False)   
+    df.to_excel('Final result.xlsx', sheet_name='combined_result', index=False)
+    
+    return {'df':df,
+            'resPubmed':resPubmed,
+            'resSciDirect':resSciDirect}
     
 
-# You may update or chenge this logic
+# You may update or change this logic
 # Separate with , to form a group of any words that should be in
 # Separete with ; to form a group of group of required any words that should be in
 # Fields to be searched are: TITLE, ABSTRACT, KEYWORDS
